@@ -24,3 +24,16 @@ def baixar_cadastro_operadoras():
         f.write(resposta.content)
 
     print("Cadastro de operadoras baixado com sucesso")
+
+# Funções auxiliares
+def carregar_arquivo(caminho):
+    
+    # Tentar ler o arquivo com base na extensão
+    try:
+        if caminho.lower().endswith((".csv", ".txt")):
+            return pd.read_csv(caminho, sep=";", encoding="latin1")
+        elif caminho.lower().endswith(".xlsx"):
+            return pd.read_excel(caminho)
+    except Exception as e:
+        print(f"Erro ao ler {caminho}: {e}")
+    return None

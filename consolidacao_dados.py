@@ -136,3 +136,23 @@ def tratar_inconsistencias(df, cnpj_razao_map):
     )
 
     return df
+
+# Função para gerar o arquivo ZIP com o CSV consolidado
+def gerar_zip(df, nome_csv="consolidado_despesas.csv"):
+    df.to_csv(nome_csv, index=False)
+
+    with zipfile.ZipFile(
+        "consolidado_despesas.zip",
+        "w",
+        zipfile.ZIP_DEFLATED
+    ) as zipf:
+        zipf.write(nome_csv)
+
+    os.remove(nome_csv)
+
+if __name__ == "__main__":
+    df, mapa_cnpj = consolidar_dados(".")
+    df_tratado = tratar_inconsistencias(df, mapa_cnpj)
+    gerar_zip(df_tratado)
+
+    print("consolidado_despesas.zip gerado com sucesso")

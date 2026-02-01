@@ -28,3 +28,32 @@ def arquivo_contem_sinistros(caminho):
 
     except Exception:
         return False
+
+# Função principal para identificar arquivos relevantes
+def identificar_arquivos_sinistros(diretorio_base):
+    arquivos_relevantes = []
+
+    # Iterar sobre as pastas extraídas
+    for pasta in os.listdir(diretorio_base):
+        if not os.path.isdir(pasta):
+            continue
+
+        # Construir o caminho completo da pasta
+        for arquivo in os.listdir(pasta):
+            if not arquivo.lower().endswith(extensoes_suportadas):
+                continue
+
+            caminho = os.path.join(pasta, arquivo)
+
+            # Verificar se o arquivo contém a expressão alvo
+            if arquivo_contem_sinistros(caminho):
+                print(f"Contém 'Despesas com Eventos / Sinistros': {caminho}")
+                arquivos_relevantes.append(caminho)
+            else:
+                print(f"Ignorado: {caminho}")
+
+    return arquivos_relevantes
+
+# Executar a função principal
+if __name__ == "__main__":
+    arquivos = identificar_arquivos_sinistros(".")

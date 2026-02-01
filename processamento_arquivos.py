@@ -16,3 +16,7 @@ for arquivo in os.listdir(diretorio_atual):
     nome_base = os.path.splitext(arquivo)[0]
     pasta_destino = os.path.join(diretorio_atual, nome_base)
 
+    # Verificar se a pasta de destino já existe
+    if os.path.exists(pasta_destino):
+        print(f"Já extraído: {arquivo}")
+        continue

@@ -76,4 +76,4 @@ def validar_dados():
 if __name__ == "__main__":
     extrair_zip()
     validar_dados()
-    print("✅ Validação concluída. Arquivo consolidado_despesas_validado.csv gerado.")
+    print("Validação concluída. Arquivo consolidado_despesas_validado.csv gerado.")

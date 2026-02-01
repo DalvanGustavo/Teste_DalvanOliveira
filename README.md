@@ -233,3 +233,28 @@ O join foi realizado em memória, considerando:
 - Volume reduzido dos dados
 - Simplicidade e clareza da solução
 - Ausência de impacto relevante em consumo de recursos
+
+## 10. Agregação de Despesas (Teste 2.3)
+
+Foi realizada a agregação dos dados enriquecidos com o objetivo de analisar o comportamento financeiro das operadoras por unidade federativa.
+
+### Estratégia de Agregação
+Os dados foram agrupados por:
+- RazaoSocial
+- UF
+
+Para cada grupo foram calculados:
+- TotalDespesas: soma total das despesas
+- MediaDespesasTrimestre: média das despesas por trimestre
+- DesvioPadraoDespesas: medida de variabilidade das despesas
+
+### Ordenação
+Os resultados foram ordenados pelo valor total de despesas, do maior para o menor, facilitando a identificação das operadoras com maior impacto financeiro.
+
+### Trade-off Técnico
+A agregação e ordenação foram realizadas em memória utilizando Pandas, considerando:
+- Volume reduzido de dados
+- Eficiência das operações vetorizadas
+- Simplicidade da solução
+
+Em cenários de maior escala, essa etapa poderia ser migrada para processamento distribuído ou bancos analíticos.

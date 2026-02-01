@@ -53,5 +53,14 @@ try:
             if href.lower().endswith('.zip') and re.search(regex_final, href):
                 links_zip.append(href)
 
+        # Ordenar os links em ordem decrescente
+        links_zip.sort(reverse=True)
+
+        # Baixar até 3 arquivos
+        for nome_zip in links_zip:
+            if arquivos_baixados_count < 3:
+                link_download = f"{url_ano}{nome_zip}"
+                print(f"Baixando: {nome_zip}")
+
 except Exception as e:
     print(f"Ocorreu um erro geral: {e}")

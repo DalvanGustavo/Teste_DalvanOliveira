@@ -58,3 +58,71 @@ def carregar_cadastro_operadoras():
     })
 
     return df[["reg_ans", "cnpj", "razaosocial"]]
+
+# Função para consolidar dados de todos os arquivos relevantes
+def consolidar_dados(diretorio_base):
+    registros = []
+    cnpj_razao_map = defaultdict(set)
+
+    cadastro = carregar_cadastro_operadoras()
+
+    # Iterar sobre as pastas extraídas
+    for pasta in os.listdir(diretorio_base):
+        if not os.path.isdir(pasta):
+            continue
+
+        # Construir o caminho completo da pasta
+        for arquivo in os.listdir(pasta):
+            if not arquivo.lower().endswith(extensoes_suportadas):
+                continue
+
+            caminho = os.path.join(pasta, arquivo)
+            df = carregar_arquivo(caminho)
+            if df is None:
+                continue
+
+            df.columns = [c.lower() for c in df.columns]
+
+            colunas_necessarias = {
+                "reg_ans", "data", "descricao", "vl_saldo_final"
+            }
+            if not colunas_necessarias.issubset(df.columns):
+                continue
+
+            df["descricao"] = df["descricao"].astype(str).str.lower()
+            df = df[df["descricao"] == expressao_alvo]
+            if df.empty:
+                continue
+
+            df["vl_saldo_final"] = (
+                df["vl_saldo_final"]
+                .astype(str)
+                .str.replace(".", "", regex=False)
+                .str.replace(",", ".", regex=False)
+            )
+            df["vl_saldo_final"] = pd.to_numeric(
+                df["vl_saldo_final"], errors="coerce"
+            )
+            df = df.dropna(subset=["vl_saldo_final"])
+
+            df["Ano"], df["Trimestre"] = zip(
+                *df["data"].apply(extrair_ano_trimestre)
+            )
+            df = df.dropna(subset=["Ano", "Trimestre"])
+
+            df = df.merge(cadastro, on="reg_ans", how="left")
+            df["cnpj"] = df["cnpj"].fillna("NAO_ENCONTRADO")
+            df["razaosocial"] = df["razaosocial"].fillna("NAO_ENCONTRADA")
+
+            for _, row in df.iterrows():
+                cnpj_razao_map[row["cnpj"]].add(row["razaosocial"])
+
+                registros.append({
+                    "CNPJ": row["cnpj"],
+                    "RazaoSocial": row["razaosocial"],
+                    "Ano": int(row["Ano"]),
+                    "Trimestre": int(row["Trimestre"]),
+                    "ValorDespesas": float(row["vl_saldo_final"])
+                })
+
+    return pd.DataFrame(registros), cnpj_razao_map

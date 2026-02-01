@@ -45,3 +45,16 @@ def extrair_ano_trimestre(valor_data):
         return None, None
     trimestre = (data.month - 1) // 3 + 1
     return data.year, trimestre
+
+# Função para carregar o cadastro de operadoras
+def carregar_cadastro_operadoras():
+    baixar_cadastro_operadoras()
+    df = pd.read_csv(cadop_arquivo, sep=";", encoding="latin1")
+    df.columns = [c.lower() for c in df.columns]
+
+    df = df.rename(columns={
+        "registro_operadora": "reg_ans",
+        "razao_social": "razaosocial"
+    })
+
+    return df[["reg_ans", "cnpj", "razaosocial"]]

@@ -20,3 +20,14 @@ for arquivo in os.listdir(diretorio_atual):
     if os.path.exists(pasta_destino):
         print(f"Já extraído: {arquivo}")
         continue
+
+    # Extrair o conteúdo do arquivo ZIP
+    print(f"Extraindo: {arquivo}")
+    os.makedirs(pasta_destino, exist_ok=True)
+
+     # Tentar extrair o arquivo ZIP
+    try:
+        with zipfile.ZipFile(caminho_zip, "r") as zip_ref:
+            zip_ref.extractall(pasta_destino)
+    except zipfile.BadZipFile:
+        print(f"ZIP inválido: {arquivo}")

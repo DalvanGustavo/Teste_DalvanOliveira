@@ -10,3 +10,10 @@ palavra_chave_pasta = "demonstracoes_contabeis"
 try:
     resposta = requests.get(base_url)
     soup = BeautifulSoup(resposta.text, 'html.parser')
+
+    # Procurar links que contenham a palavra-chave especificada
+    link_encontrados = ""
+    for link in soup.find_all('a', href=True):
+        if palavra_chave_pasta in link.get('href').lower():
+            link_encontrados = link.get('href')
+            break

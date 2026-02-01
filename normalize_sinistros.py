@@ -56,3 +56,36 @@ def normalizar_arquivo(caminho):
 
 
     return df[["data", "reg_ans", "descricao", "valor"]]
+
+# Função para consolidar dados de todos os arquivos relevantes
+def consolidar_dados(diretorio_base, saida="despesas_sinistros_normalizado.csv"):
+    consolidado = []
+
+    # Iterar sobre as pastas extraídas
+    for pasta in os.listdir(diretorio_base):
+        if not os.path.isdir(pasta):
+            continue
+        
+        # Construir o caminho completo da pasta
+        for arquivo in os.listdir(pasta):
+            if not arquivo.lower().endswith(extensoes_suportadas):
+                continue
+
+            caminho = os.path.join(pasta, arquivo)
+            df_norm = normalizar_arquivo(caminho)
+
+            if df_norm is not None:
+                consolidado.append(df_norm)
+                print(f"Normalizado: {caminho}")
+
+    # Concatenar todos os DataFrames normalizados e salvar em CSV
+    if consolidado:
+        resultado = pd.concat(consolidado, ignore_index=True)
+        resultado.to_csv(saida, index=False)
+        print(f"\nDataset final gerado: {saida}")
+    else:
+        print("Nenhum dado relevante encontrado.")
+
+
+if __name__ == "__main__":
+    consolidar_dados(".")

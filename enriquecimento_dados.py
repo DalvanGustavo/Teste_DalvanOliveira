@@ -46,3 +46,20 @@ def enriquecer_dados():
     df_final["CadastroEncontrado"] = ~df_final["RegistroANS"].isna()
 
     return df_final
+
+# Função para gerar o arquivo ZIP de saída
+def gerar_zip(df):
+    df.to_csv(csv_saida, index=False)
+
+    with zipfile.ZipFile(zip_saida, "w", zipfile.ZIP_DEFLATED) as zipf:
+        zipf.write(csv_saida)
+
+    os.remove(csv_saida)
+
+# Execução do script
+if __name__ == "__main__":
+    df_enriquecido = enriquecer_dados()
+    gerar_zip(df_enriquecido)
+
+    print("Enriquecimento concluído")
+    print(f"Arquivo final gerado: {zip_saida}")

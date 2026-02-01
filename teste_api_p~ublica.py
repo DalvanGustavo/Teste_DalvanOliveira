@@ -45,6 +45,13 @@ try:
         
         res_ano = requests.get(url_ano)
         soup_ano = BeautifulSoup(res_ano.text, 'html.parser')
+    
+    # Coletar links dos arquivos zip que correspondem ao padrão regex
+        links_zip = []
+        for l in soup_ano.find_all('a', href=True):
+            href = l.get('href')
+            if href.lower().endswith('.zip') and re.search(regex_final, href):
+                links_zip.append(href)
 
 except Exception as e:
     print(f"Ocorreu um erro geral: {e}")

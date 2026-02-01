@@ -37,3 +37,11 @@ def carregar_arquivo(caminho):
     except Exception as e:
         print(f"Erro ao ler {caminho}: {e}")
     return None
+
+# Função para extrair ano e trimestre de uma data
+def extrair_ano_trimestre(valor_data):
+    data = pd.to_datetime(valor_data, errors="coerce", dayfirst=True)
+    if pd.isna(data):
+        return None, None
+    trimestre = (data.month - 1) // 3 + 1
+    return data.year, trimestre

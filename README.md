@@ -206,3 +206,30 @@ O projeto foi desenvolvido priorizando:
 - Aderência aos requisitos do teste técnico
 
 Toda a solução é baseada exclusivamente em **dados públicos oficiais da ANS**.
+
+## 9. Enriquecimento de Dados (Teste 2.2)
+
+Foi realizado o enriquecimento do CSV consolidado utilizando os dados cadastrais das operadoras ativas (CADOP).
+
+### Estratégia de Join
+- Tipo: LEFT JOIN
+- Chave: CNPJ
+
+Essa abordagem garante que nenhum registro financeiro seja perdido, mesmo quando não há correspondência cadastral.
+
+### Tratamento de Falhas
+
+**Registros sem match no cadastro**
+- Mantidos no dataset
+- Campos cadastrais preenchidos como nulos
+- Flag `CadastroEncontrado = false`
+
+**CNPJs duplicados no cadastro**
+- Mantido apenas um registro por CNPJ
+- Flag `CadastroDuplicado = true` para sinalização
+
+### Trade-off Técnico
+O join foi realizado em memória, considerando:
+- Volume reduzido dos dados
+- Simplicidade e clareza da solução
+- Ausência de impacto relevante em consumo de recursos

@@ -27,5 +27,24 @@ try:
     anos_encontrados = [a.get('href') for a in soup_pasta.find_all('a', href=True) if re.match(r'^\d{4}/', a.get('href'))]
     anos_ordenados = sorted(anos_encontrados, reverse=True)
 
+    # Definir os padrões regex para os arquivos desejados
+    padrao_1 = r'\d{4}_\d{1}_trimestre'
+    padrao_2 = r'\d{8}_\d{1}T\d{4}'
+    padrao_3 = r'\d{1}T\d{4}'
+    regex_final = f"({padrao_1}|{padrao_2}|{padrao_3})"
+
+    arquivos_baixados_count = 0
+
+    # Iterar pelos anos para encontrar e baixar os arquivos desejados
+    for ano in anos_ordenados:
+        if arquivos_baixados_count >= 3:
+            break
+            
+        url_ano = f"{url_da_pasta_principal}{ano}"
+        print(f"Verificando ano: {ano}")
+        
+        res_ano = requests.get(url_ano)
+        soup_ano = BeautifulSoup(res_ano.text, 'html.parser')
+
 except Exception as e:
     print(f"Ocorreu um erro geral: {e}")

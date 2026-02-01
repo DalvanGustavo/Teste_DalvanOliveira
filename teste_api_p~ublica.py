@@ -62,5 +62,14 @@ try:
                 link_download = f"{url_ano}{nome_zip}"
                 print(f"Baixando: {nome_zip}")
 
+                # Fazer o download do arquivo
+                conteudo = requests.get(link_download).content
+                with open(nome_zip, 'wb') as f:
+                    f.write(conteudo)
+                
+                arquivos_baixados_count += 1
+            else:
+                break
+
 except Exception as e:
     print(f"Ocorreu um erro geral: {e}")

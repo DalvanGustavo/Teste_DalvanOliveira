@@ -45,3 +45,35 @@ def validar_cnpj(cnpj):
     dig2 = calcular_digito(cnpj[:13], pesos_2)
 
     return cnpj[-2:] == dig1 + dig2
+
+# Função principal para validar os dados
+def validar_dados():
+    df = pd.read_csv(csv_entrada)
+
+    # Validação do CNPJ
+    df["CNPJ_Valido"] = df["CNPJ"].apply(validar_cnpj)
+
+    # Validação do Valor das Despesas
+    df["ValorValido"] = df["ValorDespesas"].apply(
+        lambda x: x > 0 if pd.notna(x) else False
+    )
+
+    # Validação da Razão Social
+    df["RazaoSocialValida"] = (
+        df["RazaoSocial"].astype(str).str.strip() != ""
+    )
+
+    # Registro final válido
+    df["RegistroValido"] = (
+        df["CNPJ_Valido"] &
+        df["ValorValido"] &
+        df["RazaoSocialValida"]
+    )
+
+    df.to_csv(csv_saida, index=False)
+
+# Execução do script
+if __name__ == "__main__":
+    extrair_zip()
+    validar_dados()
+    print("✅ Validação concluída. Arquivo consolidado_despesas_validado.csv gerado.")

@@ -126,3 +126,13 @@ def consolidar_dados(diretorio_base):
                 })
 
     return pd.DataFrame(registros), cnpj_razao_map
+
+# Função para tratar inconsistências nos dados
+def tratar_inconsistencias(df, cnpj_razao_map):
+    df.loc[df["ValorDespesas"] <= 0, "ValorDespesas"] = None
+
+    df["RazaoSocialSuspeita"] = df["CNPJ"].apply(
+        lambda cnpj: len(cnpj_razao_map[cnpj]) > 1
+    )
+
+    return df

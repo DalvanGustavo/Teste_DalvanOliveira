@@ -1,3 +1,4 @@
+import re
 import os
 import zipfile
 import requests
@@ -47,15 +48,49 @@ def extrair_ano_trimestre(valor_data):
     return data.year, trimestre
 
 # Função para carregar o cadastro de operadoras
+
+def normalizar_cnpj(valor):
+    s = str(valor).strip()
+
+    # remove .0 se existir
+    if s.endswith(".0"):
+        s = s[:-2]
+
+    # mantém apenas dígitos
+    s = re.sub(r"\D", "", s)
+
+    # se ficou com 15 e termina em 0 (efeito float), remove o último
+    if len(s) == 15 and s.endswith("0"):
+        s = s[:-1]
+
+    # completa para 14
+    s = s.zfill(14)
+
+    # se não for 14, marca como NA
+    if len(s) != 14:
+        return None
+
+    return s
+
+
 def carregar_cadastro_operadoras():
     baixar_cadastro_operadoras()
-    df = pd.read_csv(cadop_arquivo, sep=";", encoding="latin1")
-    df.columns = [c.lower() for c in df.columns]
+
+    # FORÇAR tudo como string
+    df = pd.read_csv(cadop_arquivo, sep=";", encoding="latin1", dtype=str)
+    df.columns = [c.lower().strip() for c in df.columns]
 
     df = df.rename(columns={
         "registro_operadora": "reg_ans",
         "razao_social": "razaosocial"
     })
+
+    # normalizar campos-chave
+    df["reg_ans"] = df["reg_ans"].astype(str).str.strip()
+    df["cnpj"] = df["cnpj"].apply(normalizar_cnpj)
+
+    # remove cadastros sem CNPJ normalizado
+    df = df.dropna(subset=["cnpj"])
 
     return df[["reg_ans", "cnpj", "razaosocial"]]
 
@@ -110,9 +145,15 @@ def consolidar_dados(diretorio_base):
             )
             df = df.dropna(subset=["Ano", "Trimestre"])
 
+            # Garantir o mesmo tipo nos dois lados do merge
+            df["reg_ans"] = (df["reg_ans"].astype(str).str.strip().str.replace(r"\D", "", regex=True))
+            cadastro["reg_ans"] = (cadastro["reg_ans"].astype(str).str.strip().str.replace(r"\D", "", regex=True))
+
             df = df.merge(cadastro, on="reg_ans", how="left")
-            df["cnpj"] = df["cnpj"].fillna("NAO_ENCONTRADO")
-            df["razaosocial"] = df["razaosocial"].fillna("NAO_ENCONTRADA")
+
+            # manter vazio em vez de "NAO_ENCONTRADO" para não poluir CNPJ
+            df["cnpj"] = df["cnpj"].fillna("")
+            df["razaosocial"] = df["razaosocial"].fillna("")
 
             for _, row in df.iterrows():
                 cnpj_razao_map[row["cnpj"]].add(row["razaosocial"])

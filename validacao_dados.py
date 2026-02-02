@@ -48,7 +48,7 @@ def validar_cnpj(cnpj):
 
 # Função principal para validar os dados
 def validar_dados():
-    df = pd.read_csv(csv_entrada)
+    df = pd.read_csv(csv_entrada, dtype={"CNPJ": str})
 
     # Validação do CNPJ
     df["CNPJ_Valido"] = df["CNPJ"].apply(validar_cnpj)

@@ -258,3 +258,92 @@ A agregação e ordenação foram realizadas em memória utilizando Pandas, cons
 - Simplicidade da solução
 
 Em cenários de maior escala, essa etapa poderia ser migrada para processamento distribuído ou bancos analíticos.
+
+## 11. Teste de Banco de Dados e Análise (MySQL 8.0)
+
+Esta etapa utiliza o MySQL 8.0 para estruturar as tabelas e importar os dados gerados nas etapas anteriores:
+
+- `consolidado_despesas.csv` (Teste 1.3)
+- `despesas_agregadas.csv` (Teste 2.3)
+- `Relatorio_cadop.csv` (CADOP – dados cadastrais das operadoras)
+
+---
+
+### 11.1 Importação dos CSVs (3.3)
+
+#### Estratégia adotada: Staging + Carga tratada
+Para atender aos requisitos de validação e tratamento de inconsistências durante a importação, foi adotada a estratégia:
+
+1. **Importar os CSVs para tabelas de staging (`stg_*`)**
+   - Todas as colunas são carregadas como `VARCHAR`
+   - Evita falhas de importação por tipo incorreto
+   - Permite validação e limpeza antes da inserção final
+
+2. **Inserir os dados nas tabelas finais (`operadoras`, `despesas_consolidadas`, `despesas_agregadas`)**
+   - Conversões explícitas (`CAST`)
+   - Limpeza de campos (`TRIM`, `REGEXP_REPLACE`)
+   - Rejeição de registros inválidos (via cláusulas `WHERE`)
+
+Essa abordagem é mais robusta, pois impede que inconsistências contaminem as tabelas analíticas finais e permite contabilizar/explicar rejeições.
+
+---
+
+### 11.2 Encoding utilizado
+- Os arquivos gerados pelo pipeline em Python (`consolidado_despesas.csv` e `despesas_agregadas.csv`) são carregados com `UTF-8` (`CHARACTER SET utf8mb4`).
+- O arquivo do CADOP (`Relatorio_cadop.csv`) pode estar em `latin1` (conforme padrão frequente de arquivos ANS). Por isso, na importação foi utilizado `CHARACTER SET latin1` para evitar caracteres corrompidos.
+
+---
+
+### 11.3 Tratamento de inconsistências durante a importação
+
+Durante o carregamento e conversão dos dados, foram tratadas as seguintes inconsistências:
+
+#### a) Valores `NULL` (ou vazios) em campos obrigatórios
+Exemplos: `CNPJ`, `Ano`, `Trimestre`, `UF`, `RazaoSocial`.
+
+**Tratamento adotado:** rejeitar registro na carga final.  
+Implementação: filtros `WHERE` nas queries de inserção (ex.: CNPJ com 14 dígitos, ano com 4 dígitos, trimestre entre 1 e 4).
+
+**Justificativa:** registros incompletos inviabilizam análises e podem gerar resultados incorretos.
+
+---
+
+#### b) Strings em campos numéricos
+Exemplos: valores monetários contendo caracteres inesperados.
+
+**Tratamento adotado:**
+- Tentativa de conversão controlada com `REGEXP`
+- Caso não seja possível converter → valor vira `NULL` e o registro pode ser rejeitado (quando necessário)
+
+**Justificativa:** evita conversões automáticas incorretas do MySQL (por exemplo, texto virando `0` silenciosamente).
+
+---
+
+#### c) Formatos numéricos inconsistentes (vírgula/ponto)
+Durante a importação foram identificados formatos distintos:
+- `1234.56` (padrão US)
+- `1.234,56` (padrão BR)
+
+**Tratamento adotado:** regra condicional:
+- Se o valor contém `,` → considera formato BR (remove `.` de milhar e troca `,` por `.`)
+- Caso contrário → considera formato US (mantém o ponto decimal)
+
+**Justificativa:** garante conversão correta para `DECIMAL`, evitando erro de `Out of range` e distorções.
+
+---
+
+#### d) Datas inconsistentes
+O modelo final foi estruturado com `Ano` e `Trimestre` (tipos `YEAR` e `TINYINT`), evitando dependência de parsing de datas completas no banco.
+
+**Tratamento adotado:** validação de ano/trimestre via regex e conversão com `CAST`.
+
+**Justificativa:** reduz complexidade e aumenta robustez, mantendo o período temporal de forma padronizada.
+
+---
+
+### 11.4 Observação sobre restrição do Workbench (LOAD DATA)
+Durante a execução foi necessário lidar com restrições de leitura de arquivos no MySQL/Workbench.
+
+- O MySQL pode restringir leitura a um diretório definido por:
+  ```sql
+  SELECT @@secure_file_priv;

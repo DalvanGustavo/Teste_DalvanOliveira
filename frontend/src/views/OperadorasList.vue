@@ -1,31 +1,42 @@
 <template>
-  <div>
-    <h3>Operadoras</h3>
+  <div class="card">
+    <div class="row spread mb12">
+      <div>
+        <h3 class="h3">Operadoras</h3>
+        <p class="muted small">Tabela paginada com busca por CNPJ ou Razão Social.</p>
+      </div>
 
-    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <div class="muted small">
+        Total: <strong>{{ total }}</strong>
+      </div>
+    </div>
+
+    <div class="row mb12">
       <input
         v-model="search"
+        class="input"
         placeholder="Buscar por Razão Social ou CNPJ"
-        style="flex:1; padding:8px;"
         @keyup.enter="applySearch"
       />
-      <button @click="applySearch">Buscar</button>
-      <button @click="clearSearch" :disabled="!search">Limpar</button>
+      <button class="btn" @click="applySearch">Buscar</button>
+      <button class="btn secondary" @click="clearSearch" :disabled="!search && !appliedSearch">
+        Limpar
+      </button>
     </div>
 
     <Loading v-if="loading" />
     <ErrorBox v-else-if="error" :message="error" />
 
     <div v-else>
-      <p v-if="total === 0">Nenhuma operadora encontrada.</p>
+      <p v-if="total === 0" class="muted">Nenhuma operadora encontrada.</p>
 
-      <table v-else border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse:collapse;">
+      <table v-else class="table">
         <thead>
           <tr>
-            <th>CNPJ</th>
+            <th style="width: 170px;">CNPJ</th>
             <th>Razão Social</th>
-            <th>UF</th>
-            <th></th>
+            <th style="width: 70px;">UF</th>
+            <th style="width: 90px;"></th>
           </tr>
         </thead>
         <tbody>
@@ -40,16 +51,16 @@
         </tbody>
       </table>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
-        <div>
-          Página {{ page }} de {{ totalPages }} — Total: {{ total }}
+      <div class="row spread mt12">
+        <div class="muted">
+          Página <strong>{{ page }}</strong> de <strong>{{ totalPages }}</strong>
         </div>
 
-        <div style="display:flex; gap:8px;">
-          <button @click="prev" :disabled="page <= 1">Anterior</button>
-          <button @click="next" :disabled="page >= totalPages">Próxima</button>
+        <div class="row gap8">
+          <button class="btn secondary" @click="prev" :disabled="page <= 1">Anterior</button>
+          <button class="btn secondary" @click="next" :disabled="page >= totalPages">Próxima</button>
 
-          <select v-model.number="limit" @change="changeLimit">
+          <select class="select" v-model.number="limit" @change="changeLimit">
             <option :value="10">10</option>
             <option :value="20">20</option>
             <option :value="50">50</option>
@@ -68,6 +79,7 @@ import ErrorBox from "../components/ErrorBox.vue";
 
 const loading = ref(true);
 const error = ref("");
+
 const rows = ref([]);
 const total = ref(0);
 
@@ -82,6 +94,7 @@ const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit.valu
 async function fetchData() {
   loading.value = true;
   error.value = "";
+
   try {
     const params = { page: page.value, limit: limit.value };
     if (appliedSearch.value) params.search = appliedSearch.value;
@@ -90,7 +103,11 @@ async function fetchData() {
     rows.value = data.data;
     total.value = data.total;
   } catch (e) {
-    error.value = e?.response?.data?.detail || "Falha ao carregar operadoras.";
+    console.error(e);
+    const status = e?.response?.status;
+    error.value = status
+      ? `Falha ao carregar operadoras (HTTP ${status}).`
+      : "Falha ao carregar operadoras (sem resposta do servidor).";
   } finally {
     loading.value = false;
   }

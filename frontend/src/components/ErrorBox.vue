@@ -1,5 +1,5 @@
 <template>
-  <div style="padding: 12px; border: 1px solid #f99; background: #fff5f5;">
+  <div class="alert">
     <strong>Erro:</strong> {{ message }}
   </div>
 </template>

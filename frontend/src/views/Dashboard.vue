@@ -95,7 +95,16 @@ function renderChart() {
     type: "bar",
     data: {
       labels,
-      datasets: [{ label: "Total de despesas", data: values }],
+      datasets: [{
+      label: "Total de despesas",
+      data: values,
+      backgroundColor: "rgba(0, 229, 255, 0.20)",
+      borderColor: "#00E5FF",       // borda
+      hoverBackgroundColor: "rgba(0, 229, 255, 0.35)",
+    hoverBorderColor: "#00E5FF",
+      borderWidth: 1,
+      borderRadius: 10,
+    }],
     },
     options: {
         responsive: true,

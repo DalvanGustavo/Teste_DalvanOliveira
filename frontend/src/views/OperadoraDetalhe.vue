@@ -112,7 +112,15 @@ async function loadAll() {
         type: "line",
         data: {
           labels,
-          datasets: [{ label: "Despesas", data: values }],
+          datasets: [{
+          label: "Despesas",
+          data: values,
+          borderColor: "rgba(106, 166, 255, 1)",
+          backgroundColor: "rgba(106, 166, 255, 0.25)",
+          fill: true,       // preenche a área abaixo da linha
+          tension: 0.25,    // suaviza curva
+          pointRadius: 3,
+          pointHoverRadius: 6,}],
         },
         options: {
             responsive: true,

@@ -491,6 +491,51 @@ Rodar queries analíticas:
 
 ---
 
+## 4.2 Trade-offs técnicos — Backend (FastAPI)
+
+### 4.2.1 Escolha do Framework
+**Escolha:** FastAPI (Opção B)
+
+**Justificativa:**
+- **Complexidade/boilerplate menor:** validação e serialização com Pydantic reduzem código manual.
+- **Documentação automática:** geração nativa de OpenAPI/Swagger facilita testes e integração (incluindo Postman).
+- **Performance e escalabilidade:** execução em ASGI e compatibilidade com rotas assíncronas (quando necessário).
+- **Manutenção:** tipagem e contratos de resposta ajudam a manter consistência do backend.
+
+### 4.2.2 Estratégia de Paginação
+**Escolha:** Offset-based (Opção A) via parâmetros `page` e `limit`.
+
+**Justificativa:**
+- O volume de operadoras é significativo, mas **compatível com paginação tradicional** no contexto do teste.
+- Dados possuem **baixa frequência de atualização**, reduzindo problemas de inconsistência típicos de offset.
+- É a abordagem **mais simples para o frontend**, permitindo controle direto de página atual e total.
+
+### 4.2.3 Cache vs Queries Diretas na rota `/api/estatisticas`
+**Escolha:** Cachear resultado por X minutos (Opção B), com TTL em memória.
+
+**Justificativa:**
+- Estatísticas agregadas (total, média, top 5, distribuição por UF) podem envolver queries mais custosas.
+- O dataset do teste é relativamente estável (pouca mutação), então o cache não compromete consistência.
+- Melhora latência e reduz carga no banco sem necessidade de tabelas auxiliares.
+
+### 4.2.4 Estrutura de Resposta da API
+**Escolha:** Dados + Metadados (Opção B).
+
+Exemplo:
+```json
+{
+  "data": [{...}],
+  "total": 100,
+  "page": 1,
+  "limit": 10
+}
+```
+
+**Justificativa:**
+- Simplifica a implementação da paginação no frontend (não exige request extra para contagem).
+- Melhora UX ao permitir exibir total de registros, página atual e controle de navegação.
+
+
 ## 14. Empacotamento final
 
 Ao final do projeto, todos os arquivos de código e scripts SQL devem ser compactados em:

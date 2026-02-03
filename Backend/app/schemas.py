@@ -4,12 +4,12 @@ from typing import List, Optional
 # Schemas para respostas da API
 class OperadoraBase(BaseModel):
     cnpj: str
-    razao_social: str
+    razao_social: Optional[str] = None
     uf: Optional[str] = None
 
 # Schema para detalhes da operadora
 class OperadoraDetalhe(OperadoraBase):
-    registro_ans: Optional[str] = None
+    registro_ans: Optional[int] = None
 
 # Schema para item de despesa
 class DespesaItem(BaseModel):

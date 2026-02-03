@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from cachetools import TTLCache
+from fastapi.middleware.cors import CORSMiddleware
 
 # Local imports
 from .db import get_db
@@ -18,11 +19,10 @@ from .settings import API_CORS_ORIGINS, STATS_CACHE_TTL_SECONDS
 # FastAPI app instance
 app = FastAPI(title="ANS - Despesas API", version="1.0")
 
-# CORS para o Vue (dev)
-origins = [o.strip() for o in API_CORS_ORIGINS.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins or ["*"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

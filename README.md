@@ -406,7 +406,57 @@ README.md
 
 ---
 
-## 18. Empacotamento final
+---
+
+## 18. Aplicação de Recursos de Nuvem (Cloud)
+
+Embora este teste tenha sido executado localmente, a solução foi projetada para permitir implantação em nuvem com baixo esforço, utilizando recursos gerenciados (PaaS) e serviços cloud-native.
+
+### 18.1 Arquitetura sugerida (AWS)
+
+- **Amazon S3 (Data Lake)**  
+  Armazenamento dos arquivos em camadas:
+  - `raw/` (ZIPs e arquivos originais ANS)
+  - `processed/` (CSVs normalizados e consolidados)
+  - `exports/` (artefatos finais como `consolidado_despesas.zip`)
+
+- **AWS Lambda + EventBridge (Agendamento e ingestão)**  
+  Execução automatizada do pipeline em periodicidade trimestral, com gatilho via EventBridge.
+
+- **Amazon RDS MySQL (Banco gerenciado)**  
+  Substitui o MySQL local, oferecendo:
+  - backup automático
+  - alta disponibilidade (Multi-AZ)
+  - monitoramento e métricas
+
+- **ECS Fargate (Backend FastAPI)**  
+  Deploy do backend como container, com escalabilidade automática e integração com load balancer.
+
+- **S3 + CloudFront (Frontend Vue)**  
+  Publicação do frontend como site estático:
+  - custo reduzido
+  - alta disponibilidade
+  - cache e CDN global
+
+- **Secrets Manager / Parameter Store**  
+  Armazenamento seguro das credenciais do banco e configurações do backend.
+
+- **CloudWatch (Logs e métricas)**  
+  Centralização de logs do backend e alarmes de saúde do serviço.
+
+### 18.2 Alternativa PaaS (deploy simplificado)
+
+Como alternativa à AWS, o projeto pode ser publicado em provedores PaaS:
+
+- **Backend FastAPI**: Render / Fly.io / Railway  
+- **Banco MySQL**: Railway (ou equivalente)  
+- **Frontend Vue**: Vercel / Netlify  
+
+Essa abordagem reduz complexidade operacional e permite publicação rápida com CI/CD.
+
+
+
+## 19. Empacotamento final
 
 Ao final do projeto, todos os arquivos devem ser compactados em:
 ```

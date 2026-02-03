@@ -347,3 +347,161 @@ Durante a execução foi necessário lidar com restrições de leitura de arquiv
 - O MySQL pode restringir leitura a um diretório definido por:
   ```sql
   SELECT @@secure_file_priv;
+
+## 11.5 Observação técnica (MySQL Workbench e LOCAL INFILE)
+
+Durante a importação foi identificado o erro:
+
+```
+Error Code: 2068. LOAD DATA LOCAL INFILE file request rejected due to restrictions on access
+```
+
+Esse comportamento ocorre quando o cliente (Workbench) bloqueia o uso de LOCAL INFILE por segurança.
+
+Solução adotada:
+
+- Utilização de LOAD DATA INFILE (sem LOCAL)
+- Posicionamento dos arquivos no diretório permitido por @@secure_file_priv
+
+Essa abordagem foi a mais estável e compatível com a execução no MySQL Workbench.
+
+---
+
+## 12. Queries Analíticas (Teste 3.4)
+
+Nesta etapa foram desenvolvidas queries analíticas sobre os dados consolidados para responder às perguntas propostas.
+
+### 12.1 Query 1 — Top 5 operadoras com maior crescimento percentual
+
+**Objetivo:** identificar as 5 operadoras com maior crescimento percentual de despesas entre o primeiro e o último trimestre analisado.
+
+Tratamento de operadoras sem dados em todos os trimestres:
+
+- Caso a operadora não possua valor no trimestre inicial ou final, não é possível calcular crescimento com consistência.
+- Assim, operadoras sem pelo menos dois pontos temporais são descartadas do ranking.
+
+---
+
+### 12.2 Query 2 — Distribuição de despesas por UF (Top 5 estados)
+
+**Objetivo:** calcular o total de despesas por UF e listar os 5 estados com maiores despesas.
+
+Desafio adicional implementado:
+
+- cálculo da média de despesas por operadora em cada UF, além do total.
+
+---
+
+### 12.3 Query 3 — Operadoras acima da média geral em pelo menos 2 dos 3 trimestres
+
+**Objetivo:** identificar quantas operadoras tiveram despesas acima da média geral em pelo menos 2 dos 3 trimestres analisados.
+
+Abordagem adotada (Opção A)
+
+Foi escolhida a abordagem de contagem agregada, retornando explicitamente o número de operadoras que satisfazem a condição.
+
+Resultado observado no dataset analisado:
+
+- Nenhuma operadora ficou acima da média em pelo menos 2 dos 3 trimestres.
+- O resultado final da query é **0**.
+
+Justificativa:
+
+O comportamento do dataset indica que, apesar de existirem operadoras acima da média em 1 trimestre, não há recorrência suficiente em 2 ou mais períodos para atender à condição proposta.
+
+---
+
+### 12.4 Trade-off técnico (Query 3)
+
+A Query 3 pode ser implementada de diversas formas, incluindo:
+
+- subqueries aninhadas
+- CTEs (Common Table Expressions)
+- funções de janela (window functions)
+
+Estratégia escolhida: uso de CTEs com agregações intermediárias.
+
+Justificativa:
+
+- **Performance:** permite reduzir volume intermediário via agregação por trimestre antes de comparar com médias.
+- **Legibilidade:** o raciocínio fica explícito (períodos → média por período → comparação → contagem).
+- **Manutenibilidade:** facilita ajuste para outros números de trimestres ou critérios.
+
+---
+
+## 13. Como executar o projeto
+
+### 13.1 Requisitos
+
+- Python 3.x
+- Bibliotecas: pandas, requests, bs4
+- MySQL 8.0 + MySQL Workbench
+
+---
+
+### 13.2 Execução (pipeline em Python)
+
+Baixar últimos 3 trimestres e extrair ZIPs:
+
+```
+python acesso_api.py
+python processamento_arquivos.py
+```
+
+Consolidar dados e gerar consolidado_despesas.zip:
+
+```
+python consolidacao_dados.py
+```
+
+Validar dados:
+
+```
+python validacao_dados.py
+```
+
+Enriquecer com CADOP:
+
+```
+python enriquecimento_dados.py
+```
+
+Agregar e gerar despesas_agregadas.csv:
+
+```
+python agregacao_despesas.py
+```
+
+---
+
+### 13.3 Execução (MySQL)
+
+Criar schema e tabelas:
+
+- Executar script DDL (.sql) no Workbench
+
+Importar dados:
+
+- Carregar CSVs em tabelas staging via LOAD DATA INFILE
+- Inserir dados nas tabelas finais com as queries de conversão
+
+Rodar queries analíticas:
+
+- Executar as queries do item 3.4
+
+---
+
+## 14. Empacotamento final
+
+Ao final do projeto, todos os arquivos de código e scripts SQL devem ser compactados em:
+
+```
+Teste_DalvanOliveira.zip
+```
+
+Incluindo:
+
+- scripts Python
+- scripts SQL
+- README.md
+- CSVs gerados (quando aplicável)

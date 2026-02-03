@@ -19,7 +19,6 @@ Fonte:
 https://dadosabertos.ans.gov.br/FTP/PDA/
 ```
 
-
 Características:
 - Arquivos organizados por **ano/trimestre**
 - Formatos variados: **CSV, TXT e XLSX**
@@ -38,7 +37,6 @@ Fonte:
 ```
 https://dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude_ativas/Relatorio_cadop.csv
 ```
-
 
 #### Justificativa técnica para uso do arquivo adicional
 
@@ -86,7 +84,7 @@ Foi adotado o **processamento incremental**, no qual cada arquivo é:
 4. Enriquecido com dados cadastrais
 5. Consolidado ao resultado final
 
-#### Justificativa técnica:
+Justificativa técnica:
 - Redução do consumo de memória
 - Robustez frente a grandes volumes de dados
 - Tratamento isolado de falhas
@@ -98,105 +96,68 @@ Foi adotado o **processamento incremental**, no qual cada arquivo é:
 
 Apesar das variações de formato, todos os dados são normalizados para a seguinte estrutura final:
 
-| Coluna                | Descrição |
-|-----------------------|-----------|
-| CNPJ                  | CNPJ da operadora |
-| RazaoSocial           | Razão social da operadora |
-| Ano                   | Ano de referência |
-| Trimestre             | Trimestre de referência |
-| ValorDespesas         | Valor consolidado das despesas |
-| RazaoSocialSuspeita   | Indicador de inconsistência cadastral |
-| RegistroValido        | Indicador de validação do registro |
+| Coluna              | Descrição |
+|---------------------|-----------|
+| CNPJ                | CNPJ da operadora |
+| RazaoSocial         | Razão social da operadora |
+| Ano                 | Ano de referência |
+| Trimestre           | Trimestre de referência |
+| ValorDespesas       | Valor consolidado das despesas |
+| RazaoSocialSuspeita | Indicador de inconsistência cadastral |
+| RegistroValido      | Indicador de validação do registro |
 
 ---
 
 ## 5. Tratamento de Inconsistências
 
-Durante a consolidação, foram identificadas e tratadas as seguintes situações:
-
 ### 5.1 CNPJs duplicados com razões sociais diferentes
-- **Tratamento:** Marcação como suspeito (`RazaoSocialSuspeita = true`)
-- **Justificativa:** Preservação da informação sem descarte indevido, permitindo auditoria posterior
-
----
+- Tratamento: Marcação como suspeito (`RazaoSocialSuspeita = true`)
+- Justificativa: Preservação da informação sem descarte indevido, permitindo auditoria posterior
 
 ### 5.2 Valores zerados ou negativos
-- **Tratamento:** Marcados como inválidos
-- **Justificativa:** Valores incompatíveis com despesas operacionais
-
----
+- Tratamento: Marcados como inválidos
+- Justificativa: Valores incompatíveis com despesas operacionais
 
 ### 5.3 Datas inconsistentes ou inválidas
-- **Tratamento:** Registros descartados
-- **Justificativa:** Impossibilidade de inferir ano e trimestre com segurança
+- Tratamento: Registros descartados
+- Justificativa: Impossibilidade de inferir ano e trimestre com segurança
 
 ---
 
 ## 6. Validação de Dados (Teste 2.1)
 
-Após a consolidação, é aplicada uma etapa de **validação de qualidade dos dados**.
-
-### 6.1 Validações Implementadas
-
+### 6.1 Validações implementadas
 - **CNPJ**
   - Verificação de formato (14 dígitos)
   - Validação dos dígitos verificadores
-
 - **ValorDespesas**
   - Apenas valores numéricos estritamente positivos
-
 - **Razão Social**
   - Não vazia ou nula
 
-Cada registro recebe indicadores individuais de validação e um campo final:
-
+Cada registro recebe indicadores individuais e o campo final:
 - `RegistroValido`
 
----
+### 6.2 Trade-off técnico – CNPJs inválidos
+Estratégia adotada: **marcação explícita dos registros inválidos**.
 
-### 6.2 Trade-off Técnico – Tratamento de CNPJs Inválidos
-
-#### Estratégias consideradas:
-1. Remover registros inválidos
-2. Corrigir automaticamente CNPJs
-3. Marcar registros inválidos sem descartá-los
-
-#### Estratégia adotada:
-**Marcação explícita dos registros inválidos**
-
-#### Justificativa:
+Justificativa:
 - Evita perda de dados potencialmente relevantes
 - Permite auditoria e rastreabilidade
 - Mantém transparência da qualidade dos dados
 
-**Prós:**
-- Preserva histórico
-- Facilita análises de qualidade
-- Compatível com contextos regulatórios
-
-**Contras:**
-- Exige filtragem adicional em análises futuras
-
 ---
 
-## 7. Entrega Final
-
+## 7. Entrega final (CSV)
 - Arquivo CSV consolidado
 - Compactado em:
 ```
 consolidado_despesas.zip
 ```
 
-
-Pronto para:
-- Análises financeiras
-- Auditorias
-- Processos regulatórios
-- Consumo por pipelines analíticos
-
 ---
 
-## 8. Considerações Finais
+## 8. Considerações finais
 
 O projeto foi desenvolvido priorizando:
 - Resiliência a dados heterogêneos
@@ -207,6 +168,8 @@ O projeto foi desenvolvido priorizando:
 
 Toda a solução é baseada exclusivamente em **dados públicos oficiais da ANS**.
 
+---
+
 ## 9. Enriquecimento de Dados (Teste 2.2)
 
 Foi realizado o enriquecimento do CSV consolidado utilizando os dados cadastrais das operadoras ativas (CADOP).
@@ -215,338 +178,244 @@ Foi realizado o enriquecimento do CSV consolidado utilizando os dados cadastrais
 - Tipo: LEFT JOIN
 - Chave: CNPJ
 
-Essa abordagem garante que nenhum registro financeiro seja perdido, mesmo quando não há correspondência cadastral.
+### Tratamento de falhas
+- **Registros sem match no cadastro**
+  - Mantidos no dataset
+  - Campos cadastrais como nulos
+  - `CadastroEncontrado = false`
+- **CNPJs duplicados no cadastro**
+  - Mantido apenas um registro por CNPJ
+  - `CadastroDuplicado = true`
 
-### Tratamento de Falhas
+Trade-off: join em memória (Pandas), considerando volume reduzido e simplicidade.
 
-**Registros sem match no cadastro**
-- Mantidos no dataset
-- Campos cadastrais preenchidos como nulos
-- Flag `CadastroEncontrado = false`
-
-**CNPJs duplicados no cadastro**
-- Mantido apenas um registro por CNPJ
-- Flag `CadastroDuplicado = true` para sinalização
-
-### Trade-off Técnico
-O join foi realizado em memória, considerando:
-- Volume reduzido dos dados
-- Simplicidade e clareza da solução
-- Ausência de impacto relevante em consumo de recursos
+---
 
 ## 10. Agregação de Despesas (Teste 2.3)
 
-Foi realizada a agregação dos dados enriquecidos com o objetivo de analisar o comportamento financeiro das operadoras por unidade federativa.
-
-### Estratégia de Agregação
-Os dados foram agrupados por:
+Agrupamento por:
 - RazaoSocial
 - UF
 
-Para cada grupo foram calculados:
-- TotalDespesas: soma total das despesas
-- MediaDespesasTrimestre: média das despesas por trimestre
-- DesvioPadraoDespesas: medida de variabilidade das despesas
+Métricas:
+- TotalDespesas
+- MediaDespesasTrimestre
+- DesvioPadraoDespesas
 
-### Ordenação
-Os resultados foram ordenados pelo valor total de despesas, do maior para o menor, facilitando a identificação das operadoras com maior impacto financeiro.
-
-### Trade-off Técnico
-A agregação e ordenação foram realizadas em memória utilizando Pandas, considerando:
-- Volume reduzido de dados
-- Eficiência das operações vetorizadas
-- Simplicidade da solução
-
-Em cenários de maior escala, essa etapa poderia ser migrada para processamento distribuído ou bancos analíticos.
-
-## 11. Teste de Banco de Dados e Análise (MySQL 8.0)
-
-Esta etapa utiliza o MySQL 8.0 para estruturar as tabelas e importar os dados gerados nas etapas anteriores:
-
-- `consolidado_despesas.csv` (Teste 1.3)
-- `despesas_agregadas.csv` (Teste 2.3)
-- `Relatorio_cadop.csv` (CADOP – dados cadastrais das operadoras)
+Trade-off: agregação em memória (Pandas) pelo volume reduzido; em escala maior poderia ir para processamento distribuído.
 
 ---
 
-### 11.1 Importação dos CSVs (3.3)
+## 11. Banco de Dados e Importação (MySQL 8.0)
 
-#### Estratégia adotada: Staging + Carga tratada
-Para atender aos requisitos de validação e tratamento de inconsistências durante a importação, foi adotada a estratégia:
+Tabelas finais:
+- `operadoras`
+- `despesas_consolidadas`
+- `despesas_agregadas`
 
-1. **Importar os CSVs para tabelas de staging (`stg_*`)**
-   - Todas as colunas são carregadas como `VARCHAR`
-   - Evita falhas de importação por tipo incorreto
-   - Permite validação e limpeza antes da inserção final
-
-2. **Inserir os dados nas tabelas finais (`operadoras`, `despesas_consolidadas`, `despesas_agregadas`)**
-   - Conversões explícitas (`CAST`)
-   - Limpeza de campos (`TRIM`, `REGEXP_REPLACE`)
-   - Rejeição de registros inválidos (via cláusulas `WHERE`)
-
-Essa abordagem é mais robusta, pois impede que inconsistências contaminem as tabelas analíticas finais e permite contabilizar/explicar rejeições.
-
----
+### 11.1 Estratégia: staging + carga tratada
+1. Importar CSVs em `stg_*` (tudo `VARCHAR`)
+2. Inserir nas tabelas finais com:
+   - `CAST`, `TRIM`, `REGEXP_REPLACE`
+   - filtros `WHERE` para rejeitar inválidos
 
 ### 11.2 Encoding utilizado
-- Os arquivos gerados pelo pipeline em Python (`consolidado_despesas.csv` e `despesas_agregadas.csv`) são carregados com `UTF-8` (`CHARACTER SET utf8mb4`).
-- O arquivo do CADOP (`Relatorio_cadop.csv`) pode estar em `latin1` (conforme padrão frequente de arquivos ANS). Por isso, na importação foi utilizado `CHARACTER SET latin1` para evitar caracteres corrompidos.
+- `consolidado_despesas.csv` e `despesas_agregadas.csv`: `utf8mb4`
+- `Relatorio_cadop.csv`: `latin1`
 
----
+### 11.3 Inconsistências tratadas na carga
+- Campos obrigatórios nulos/vazios → rejeitados
+- Strings em campos numéricos → conversão controlada
+- Formatos numéricos BR/US → regra condicional (`,` vs `.`)
+- Datas → padronização em `Ano`/`Trimestre`
 
-### 11.3 Tratamento de inconsistências durante a importação
+### 11.4 Observação: `secure_file_priv`
+Para verificar diretório permitido:
+```sql
+SELECT @@secure_file_priv;
+```
 
-Durante o carregamento e conversão dos dados, foram tratadas as seguintes inconsistências:
-
-#### a) Valores `NULL` (ou vazios) em campos obrigatórios
-Exemplos: `CNPJ`, `Ano`, `Trimestre`, `UF`, `RazaoSocial`.
-
-**Tratamento adotado:** rejeitar registro na carga final.  
-Implementação: filtros `WHERE` nas queries de inserção (ex.: CNPJ com 14 dígitos, ano com 4 dígitos, trimestre entre 1 e 4).
-
-**Justificativa:** registros incompletos inviabilizam análises e podem gerar resultados incorretos.
-
----
-
-#### b) Strings em campos numéricos
-Exemplos: valores monetários contendo caracteres inesperados.
-
-**Tratamento adotado:**
-- Tentativa de conversão controlada com `REGEXP`
-- Caso não seja possível converter → valor vira `NULL` e o registro pode ser rejeitado (quando necessário)
-
-**Justificativa:** evita conversões automáticas incorretas do MySQL (por exemplo, texto virando `0` silenciosamente).
-
----
-
-#### c) Formatos numéricos inconsistentes (vírgula/ponto)
-Durante a importação foram identificados formatos distintos:
-- `1234.56` (padrão US)
-- `1.234,56` (padrão BR)
-
-**Tratamento adotado:** regra condicional:
-- Se o valor contém `,` → considera formato BR (remove `.` de milhar e troca `,` por `.`)
-- Caso contrário → considera formato US (mantém o ponto decimal)
-
-**Justificativa:** garante conversão correta para `DECIMAL`, evitando erro de `Out of range` e distorções.
-
----
-
-#### d) Datas inconsistentes
-O modelo final foi estruturado com `Ano` e `Trimestre` (tipos `YEAR` e `TINYINT`), evitando dependência de parsing de datas completas no banco.
-
-**Tratamento adotado:** validação de ano/trimestre via regex e conversão com `CAST`.
-
-**Justificativa:** reduz complexidade e aumenta robustez, mantendo o período temporal de forma padronizada.
-
----
-
-### 11.4 Observação sobre restrição do Workbench (LOAD DATA)
-Durante a execução foi necessário lidar com restrições de leitura de arquivos no MySQL/Workbench.
-
-- O MySQL pode restringir leitura a um diretório definido por:
-  ```sql
-  SELECT @@secure_file_priv;
-
-## 11.5 Observação técnica (MySQL Workbench e LOCAL INFILE)
-
-Durante a importação foi identificado o erro:
-
+### 11.5 Observação técnica (Workbench e LOCAL INFILE)
+Erro:
 ```
 Error Code: 2068. LOAD DATA LOCAL INFILE file request rejected due to restrictions on access
 ```
 
-Esse comportamento ocorre quando o cliente (Workbench) bloqueia o uso de LOCAL INFILE por segurança.
-
-Solução adotada:
-
-- Utilização de LOAD DATA INFILE (sem LOCAL)
-- Posicionamento dos arquivos no diretório permitido por @@secure_file_priv
-
-Essa abordagem foi a mais estável e compatível com a execução no MySQL Workbench.
+Solução:
+- utilizar `LOAD DATA INFILE` (sem LOCAL)
+- posicionar arquivos no diretório retornado por `@@secure_file_priv`
 
 ---
 
 ## 12. Queries Analíticas (Teste 3.4)
 
-Nesta etapa foram desenvolvidas queries analíticas sobre os dados consolidados para responder às perguntas propostas.
-
 ### 12.1 Query 1 — Top 5 operadoras com maior crescimento percentual
+- Considera somente operadoras com valor no trimestre inicial e final
+- Crescimento percentual calculado e ordenado desc
 
-**Objetivo:** identificar as 5 operadoras com maior crescimento percentual de despesas entre o primeiro e o último trimestre analisado.
+### 12.2 Query 2 — Distribuição de despesas por UF (Top 5)
+- Total por UF
+- Média por operadora na UF
 
-Tratamento de operadoras sem dados em todos os trimestres:
-
-- Caso a operadora não possua valor no trimestre inicial ou final, não é possível calcular crescimento com consistência.
-- Assim, operadoras sem pelo menos dois pontos temporais são descartadas do ranking.
-
----
-
-### 12.2 Query 2 — Distribuição de despesas por UF (Top 5 estados)
-
-**Objetivo:** calcular o total de despesas por UF e listar os 5 estados com maiores despesas.
-
-Desafio adicional implementado:
-
-- cálculo da média de despesas por operadora em cada UF, além do total.
+### 12.3 Query 3 — Operadoras acima da média em ≥ 2 dos 3 trimestres
+- Abordagem com CTEs
+- Resultado observado: **0**
 
 ---
 
-### 12.3 Query 3 — Operadoras acima da média geral em pelo menos 2 dos 3 trimestres
+## 13. API e Interface Web (Teste 4)
 
-**Objetivo:** identificar quantas operadoras tiveram despesas acima da média geral em pelo menos 2 dos 3 trimestres analisados.
+### 13.1 Backend (FastAPI) — Rotas implementadas
 
-Abordagem adotada (Opção A)
+- `GET /api/operadoras`
+  - paginação: `page`, `limit`
+  - busca opcional: `search` (razão social ou CNPJ)
+- `GET /api/operadoras/{cnpj}`
+- `GET /api/operadoras/{cnpj}/despesas`
+- `GET /api/estatisticas`
+  - total, média
+  - top 5 operadoras
+  - distribuição de despesas por UF (para gráfico)
 
-Foi escolhida a abordagem de contagem agregada, retornando explicitamente o número de operadoras que satisfazem a condição.
+### 13.2 Trade-offs técnicos — Backend (FastAPI)
 
-Resultado observado no dataset analisado:
+#### 13.2.1 Escolha do framework
+**Escolha:** FastAPI  
+Motivos: validação com Pydantic, OpenAPI/Swagger automático, boa performance e manutenção.
 
-- Nenhuma operadora ficou acima da média em pelo menos 2 dos 3 trimestres.
-- O resultado final da query é **0**.
+#### 13.2.2 Paginação
+**Escolha:** Offset-based (`page`, `limit`)  
+Motivos: simplicidade e adequação ao cenário do teste (dados estáveis).
 
-Justificativa:
+#### 13.2.3 `/api/estatisticas`
+**Escolha:** Cache por TTL (ex.: 10 min)  
+Motivos: rota com agregações; dados pouco mutáveis; melhora latência.
 
-O comportamento do dataset indica que, apesar de existirem operadoras acima da média em 1 trimestre, não há recorrência suficiente em 2 ou mais períodos para atender à condição proposta.
-
----
-
-### 12.4 Trade-off técnico (Query 3)
-
-A Query 3 pode ser implementada de diversas formas, incluindo:
-
-- subqueries aninhadas
-- CTEs (Common Table Expressions)
-- funções de janela (window functions)
-
-Estratégia escolhida: uso de CTEs com agregações intermediárias.
-
-Justificativa:
-
-- **Performance:** permite reduzir volume intermediário via agregação por trimestre antes de comparar com médias.
-- **Legibilidade:** o raciocínio fica explícito (períodos → média por período → comparação → contagem).
-- **Manutenibilidade:** facilita ajuste para outros números de trimestres ou critérios.
-
----
-
-## 13. Como executar o projeto
-
-### 13.1 Requisitos
-
-- Python 3.x
-- Bibliotecas: pandas, requests, bs4
-- MySQL 8.0 + MySQL Workbench
-
----
-
-### 13.2 Execução (pipeline em Python)
-
-Baixar últimos 3 trimestres e extrair ZIPs:
-
-```
-python acesso_api.py
-python processamento_arquivos.py
-```
-
-Consolidar dados e gerar consolidado_despesas.zip:
-
-```
-python consolidacao_dados.py
-```
-
-Validar dados:
-
-```
-python validacao_dados.py
-```
-
-Enriquecer com CADOP:
-
-```
-python enriquecimento_dados.py
-```
-
-Agregar e gerar despesas_agregadas.csv:
-
-```
-python agregacao_despesas.py
-```
-
----
-
-### 13.3 Execução (MySQL)
-
-Criar schema e tabelas:
-
-- Executar script DDL (.sql) no Workbench
-
-Importar dados:
-
-- Carregar CSVs em tabelas staging via LOAD DATA INFILE
-- Inserir dados nas tabelas finais com as queries de conversão
-
-Rodar queries analíticas:
-
-- Executar as queries do item 3.4
-
----
-
-## 4.2 Trade-offs técnicos — Backend (FastAPI)
-
-### 4.2.1 Escolha do Framework
-**Escolha:** FastAPI (Opção B)
-
-**Justificativa:**
-- **Complexidade/boilerplate menor:** validação e serialização com Pydantic reduzem código manual.
-- **Documentação automática:** geração nativa de OpenAPI/Swagger facilita testes e integração (incluindo Postman).
-- **Performance e escalabilidade:** execução em ASGI e compatibilidade com rotas assíncronas (quando necessário).
-- **Manutenção:** tipagem e contratos de resposta ajudam a manter consistência do backend.
-
-### 4.2.2 Estratégia de Paginação
-**Escolha:** Offset-based (Opção A) via parâmetros `page` e `limit`.
-
-**Justificativa:**
-- O volume de operadoras é significativo, mas **compatível com paginação tradicional** no contexto do teste.
-- Dados possuem **baixa frequência de atualização**, reduzindo problemas de inconsistência típicos de offset.
-- É a abordagem **mais simples para o frontend**, permitindo controle direto de página atual e total.
-
-### 4.2.3 Cache vs Queries Diretas na rota `/api/estatisticas`
-**Escolha:** Cachear resultado por X minutos (Opção B), com TTL em memória.
-
-**Justificativa:**
-- Estatísticas agregadas (total, média, top 5, distribuição por UF) podem envolver queries mais custosas.
-- O dataset do teste é relativamente estável (pouca mutação), então o cache não compromete consistência.
-- Melhora latência e reduz carga no banco sem necessidade de tabelas auxiliares.
-
-### 4.2.4 Estrutura de Resposta da API
-**Escolha:** Dados + Metadados (Opção B).
-
+#### 13.2.4 Resposta de paginação
+**Escolha:** dados + metadados  
 Exemplo:
 ```json
-{
-  "data": [{...}],
-  "total": 100,
-  "page": 1,
-  "limit": 10
-}
+{ "data": [...], "total": 100, "page": 1, "limit": 10 }
+```
+Motivos: facilita UI e evita chamada extra para contagem.
+
+---
+
+## 14. Frontend (Vue.js)
+
+### 14.1 Funcionalidades implementadas
+- Dashboard:
+  - exibe total e média
+  - gráfico de barras com despesas por UF (Chart.js)
+  - lista Top 5 operadoras por despesas
+- Operadoras:
+  - tabela paginada
+  - busca/filtro por Razão Social ou CNPJ (server-side)
+- Detalhe da operadora:
+  - dados cadastrais
+  - gráfico de linha com histórico de despesas (por ano/trimestre)
+
+### 14.2 Trade-offs técnicos — Frontend
+
+#### 14.2.1 Estratégia de busca/filtro
+**Escolha:** busca no servidor (Opção A)  
+Justificativa:
+- evita carregar todas as operadoras no cliente
+- melhora performance e tempo de resposta com grandes volumes
+- permite paginação consistente com filtro aplicado
+
+#### 14.2.2 Gerenciamento de estado
+**Escolha:** estado local por componente (Props/Events simples) + chamadas diretas via Axios  
+Justificativa:
+- aplicação pequena, com baixo compartilhamento de estado
+- reduz complexidade (sem Vuex/Pinia)
+- melhor legibilidade para o contexto do teste
+
+#### 14.2.3 Performance da tabela
+**Escolha:** paginação server-side (limitando renderização)  
+Justificativa:
+- reduz custo de render em listas grandes
+- mantém UX responsiva sem necessidade de virtualização
+
+#### 14.2.4 Tratamento de erros e loading
+- loading exibido durante requisições (componente `Loading`)
+- erros exibidos de forma clara (componente `ErrorBox`)
+- estados vazios tratados (ex.: “nenhuma operadora encontrada”, “sem despesas registradas”)
+
+Trade-off:
+- mensagens de erro tendem a ser **específicas** quando possível (ex.: 404 em detalhes), e **genéricas** quando não há detalhe confiável (falha de rede).
+
+---
+
+## 15. Como executar (backend + frontend)
+
+### 15.1 Requisitos
+- Python 3.11+
+- Node.js 18+ (ou 20+)
+- MySQL 8.0 + Workbench
+
+### 15.2 Executar backend (FastAPI)
+Na pasta `Backend/`:
+```bash
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --reload
 ```
 
-**Justificativa:**
-- Simplifica a implementação da paginação no frontend (não exige request extra para contagem).
-- Melhora UX ao permitir exibir total de registros, página atual e controle de navegação.
+Acesse:
+- Swagger: `http://127.0.0.1:8000/docs`
 
+### 15.3 Executar frontend (Vue)
+Na pasta `frontend/`:
+```bash
+npm install
+npm run dev
+```
 
-## 14. Empacotamento final
+Acesse:
+- `http://localhost:5173`
 
-Ao final do projeto, todos os arquivos de código e scripts SQL devem ser compactados em:
+---
 
+## 16. Postman
+
+Foi criada uma coleção para demonstrar as rotas:
+- `GET /api/operadoras?page=1&limit=10&search=...`
+- `GET /api/operadoras/{cnpj}`
+- `GET /api/operadoras/{cnpj}/despesas`
+- `GET /api/estatisticas`
+
+Inclui exemplos de requests e respostas esperadas.
+
+---
+
+## 17. Estrutura do repositório
+
+Exemplo de organização:
+```
+Backend/
+  app/
+  requirements.txt
+  .env
+frontend/
+  src/
+  package.json
+sql/
+  script.sql
+README.md
+```
+
+---
+
+## 18. Empacotamento final
+
+Ao final do projeto, todos os arquivos devem ser compactados em:
 ```
 Teste_DalvanOliveira.zip
 ```
 
 Incluindo:
-
-- scripts Python
+- scripts Python (pipeline + backend)
 - scripts SQL
+- frontend Vue
 - README.md
 - CSVs gerados (quando aplicável)

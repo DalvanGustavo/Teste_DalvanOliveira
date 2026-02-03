@@ -65,7 +65,6 @@ LINES TERMINATED BY '\n'
 IGNORE 1 LINES
 (cnpj, razao_social, ano, trimestre, valor_despesas, razao_social_suspeita);
 
-
 -- =======================
 
 TRUNCATE TABLE stg_despesas_agregadas;
@@ -112,8 +111,7 @@ ON DUPLICATE KEY UPDATE
   razao_social = VALUES(razao_social),
   modalidade = VALUES(modalidade),
   uf = VALUES(uf);
-
-
+  
 -- ==========
 
 INSERT INTO despesas_consolidadas (cnpj, razao_social, ano, trimestre, valor_despesas, razao_social_suspeita)
@@ -198,3 +196,88 @@ FROM (
 ) t
 WHERE TRIM(razao_social) <> ''
   AND UPPER(TRIM(uf)) REGEXP '^[A-Z]{2}$';
+  
+  -- Query 1
+  
+  WITH periodos AS (
+  SELECT
+    MIN(ano * 10 + trimestre) AS p_ini,
+    MAX(ano * 10 + trimestre) AS p_fim
+  FROM teste_estagio.despesas_consolidadas
+),
+base AS (
+  SELECT
+    d.cnpj,
+    SUM(CASE WHEN (d.ano * 10 + d.trimestre) = (SELECT p_ini FROM periodos) THEN d.valor_despesas END) AS v_ini,
+    SUM(CASE WHEN (d.ano * 10 + d.trimestre) = (SELECT p_fim FROM periodos) THEN d.valor_despesas END) AS v_fim
+  FROM teste_estagio.despesas_consolidadas d
+  GROUP BY d.cnpj
+),
+crescimento AS (
+  SELECT
+    b.cnpj,
+    o.razao_social,
+    b.v_ini,
+    b.v_fim,
+    ((b.v_fim - b.v_ini) / b.v_ini) * 100 AS crescimento_percentual
+  FROM base b
+  JOIN teste_estagio.operadoras o ON o.cnpj = b.cnpj
+  WHERE b.v_ini IS NOT NULL
+    AND b.v_fim IS NOT NULL
+    AND b.v_ini > 0
+)
+SELECT *
+FROM crescimento
+ORDER BY crescimento_percentual DESC
+LIMIT 5;
+
+-- Query 2
+
+SELECT
+  o.uf,
+  SUM(d.valor_despesas) AS total_despesas_uf,
+  COUNT(DISTINCT d.cnpj) AS qtd_operadoras_com_despesa,
+  (SUM(d.valor_despesas) / NULLIF(COUNT(DISTINCT d.cnpj), 0)) AS media_por_operadora_uf
+FROM teste_estagio.despesas_consolidadas d
+JOIN teste_estagio.operadoras o ON o.cnpj = d.cnpj
+WHERE o.uf IS NOT NULL AND o.uf <> ''
+GROUP BY o.uf
+ORDER BY total_despesas_uf DESC
+LIMIT 5;
+
+-- Query 3
+
+WITH ultimos AS (
+  SELECT ano, trimestre
+  FROM (
+    SELECT DISTINCT ano, trimestre
+    FROM teste_estagio.despesas_consolidadas
+    ORDER BY ano DESC, trimestre DESC
+    LIMIT 3
+  ) x
+),
+valores AS (
+  SELECT d.cnpj, d.ano, d.trimestre, SUM(d.valor_despesas) AS valor_trim
+  FROM teste_estagio.despesas_consolidadas d
+  JOIN ultimos u ON u.ano=d.ano AND u.trimestre=d.trimestre
+  GROUP BY d.cnpj, d.ano, d.trimestre
+),
+media_trim AS (
+  SELECT ano, trimestre, AVG(valor_trim) AS media_geral_trim
+  FROM valores
+  GROUP BY ano, trimestre
+),
+acima AS (
+  SELECT v.cnpj, v.ano, v.trimestre, (v.valor_trim > m.media_geral_trim) AS acima_media
+  FROM valores v
+  JOIN media_trim m ON m.ano=v.ano AND m.trimestre=v.trimestre
+),
+contagem AS (
+  SELECT cnpj, SUM(acima_media) AS trimestres_acima
+  FROM acima
+  GROUP BY cnpj
+)
+SELECT
+  COUNT(*) AS qtd_operadoras_acima_media_em_2_ou_mais_trimestres
+FROM contagem
+WHERE trimestres_acima >= 2;
